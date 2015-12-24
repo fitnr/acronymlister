@@ -49,6 +49,45 @@ def piped_to_decimal(pipecoord):
     return sum(coords)
 
 
+def decode_coord(content):
+    '''
+    Decode {{Coord...}} into lat/lon
+    '''
+    # Example coord
+    # {{Coord|42|22|28|N|71|07|01|W|region:US_type:edu|display=title}}
+    match = re.search(r'(?<={{[cC]oord\|)([^}]+)(?=}})', content)
+
+    group = match.groups()[0]
+
+    direction_check = ('N' in group, 'S' in group, 's' in group, 'n' in group)
+
+    if any(direction_check):
+        # It's mins, secs
+        fragments = re.split(r'[NSnsWEwe]', group, 2)
+        latitude = piped_to_decimal(fragments[0])
+        longitude = piped_to_decimal(fragments[1])
+
+    else:
+        # it's decimal
+        z = group.split('|')
+        latitude, longitude = float(z[0]), float(z[1])
+
+    return {
+        "lat": latitude,
+        "long": longitude
+    }
+
+
+def decode_infobox_latlon(content):
+    lat = re.search(r'(?<=\|) ?latitude[ =]+([-\d\.]+)', content).groups()
+    lon = re.search(r'(?<=\|) ?longitude[ =]+([-\d\.]+)', content).groups()
+
+    return {
+        'lat': float(lat[0]),
+        'long': float(lon[0])
+    }
+
+
 class Acrobot(object):
 
     link = ''
@@ -182,30 +221,13 @@ class Acrobot(object):
         try:
             content = get_page_content(json)
 
-            if '{{coord' not in content:
-                raise ValueError
+            if '{{Coord' in content or '{{coord' in content:
+                return decode_coord(content)
 
-            # Example coord
-            # {{Coord|42|22|28|N|71|07|01|W|region:US_type:edu|display=title}}
-            match = re.search(r'(?<={{Coord\|)([^}]+)(?=}})', content)
+            if '| latitude' in content or '|latitude' in content:
+                return decode_infobox_latlon(content)
 
-            group = match.groups()[0]
-
-            direction_check = ('N' in group, 'S' in group, 's' in group, 'n' in group)
-
-        except (AttributeError, KeyError, ValueError):
-            self.log.debug('No geo for [[%s]]' % page)
+        except (AttributeError, KeyError, ValueError) as e:
+            self.log.debug('No geo for [[%s]]', page)
+            self.log.debug('%s', e)
             return {"lat": None, "long": None}
-
-        if any(direction_check):
-            # It's mins, secs
-            fragments = re.split(r'[NSnsWEwe]', group, 2)
-            latitude = piped_to_decimal(fragments[0])
-            longitude = piped_to_decimal(fragments[1])
-
-        else:
-            # it's decimal
-            z = group.split('|')
-            latitude, longitude = float(z[0]), float(z[1])
-
-        return {"lat": latitude, "long": longitude}
