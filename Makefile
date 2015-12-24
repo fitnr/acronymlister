@@ -18,6 +18,7 @@ alpha.db: alpha.txt
 	sqlite3 $@ ".import '/dev/stdin' tmp" < $<
 	sqlite3 $@ "CREATE TABLE combinations AS SELECT name, 0 tweeted FROM tmp;"
 	sqlite3 $@ "DROP TABLE tmp;"
+	python aaa.py $@
 
 alpha.txt:
 	echo {A..Z}{A..Z}{A..Z} | tr ' ' '\n' > $@
