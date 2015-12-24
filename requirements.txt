@@ -1,0 +1,2 @@
+twitter_bot_utils>=0.10.0
+requests
