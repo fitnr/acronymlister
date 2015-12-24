@@ -4,6 +4,7 @@ import logging
 import sqlite3
 import urllib
 import requests
+from twitter_bot_utils import helpers
 
 __version__ = '0.1'
 
@@ -110,13 +111,14 @@ class Acrobot(object):
             url = 'https://{lang}.wikipedia.org/wiki/{link}'.format(link=self.link.replace(' ', '_'), lang=self.lang)
         else:
             url = ""
+
         # link and line break are 24 characters
-        shorter_desc = tbu.helpers.shorten(description, 116)
-        status = "\n".join((description, url))
-        self.log.debug("status: %s", status)
+        desc = helpers.shorten(description, 116)
+        self.log.debug("%s %s", desc, url)
 
         update = self.get_page_geo(self.link)
-        update.update(status=status)
+        self.log.debug("%s", update)
+        update['status'] = desc + "\n" + url
         return update
 
     def next_page(self):
