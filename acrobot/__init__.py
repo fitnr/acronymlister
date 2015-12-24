@@ -18,7 +18,6 @@ list item options:
 '''
 
 WIKI = 'en'
-
 DISAMB_CAT = 'Category:Disambiguation pages'
 WIKI_SYNTAX = r"^(=|'''|\{\{|$)"
 WIKI_SPLIT = r'[\*\n]'
@@ -31,7 +30,7 @@ def format_line(line):
     '''
     # todo: remove external links
     match = re.match(WIKI_LINK, line)
-    link = match.groups()[0] if match else None
+    link = match.groups()[0] if match else ''
     desc_sans_link = re.sub(r"(?<=\[\[)[^|]+\|", '', line)
     description = re.sub(r"(\[\[|\]\]|'')", "", desc_sans_link)
 
@@ -43,11 +42,16 @@ def get_page_content(json):
     return pages[0]['revisions'][0]['*']
 
 
+def piped_to_decimal(pipecoord):
+    '''Turn xx|zz|yy| into xx.foo'''
+    atoms = enumerate(pipecoord.strip('|').split('|'))
+    coords = (float(e) / pow(60, i) for i, e in atoms)
+    return sum(coords)
+
+
 class Acrobot(object):
 
-    fmt = '{description}\nhttps://{lang}.wikipedia.org/wiki/{link}/'
-
-    last_link = None
+    link = ''
 
     def __init__(self, database, log=None, lang=None):
         self.lang = lang or WIKI
@@ -60,13 +64,19 @@ class Acrobot(object):
         return "https://{}.wikipedia.org/w/api.php".format(self.lang)
 
     def compose(self):
+        self.link, description = self.next_page()
+        self.log.info('composing [[%s]] - %s', self.link, description)
 
-        self.last_link, description = self.next_page()
-        self.log.info('composing %s', description)
-        link = urllib.parse.quote(self.last_link.replace(' ', '_'))
-        status = self.fmt.format(description=description, lang=self.lang, link=link),
+        if self.link:
+            url = 'https://{lang}.wikipedia.org/wiki/{link}'.format(link=self.link.replace(' ', '_'), lang=self.lang)
+        else:
+            url = ""
+        # link and line break are 24 characters
+        shorter_desc = tbu.helpers.shorten(description, 116)
+        status = "\n".join((description, url))
+        self.log.debug("status: %s", status)
 
-        update = self.get_page_geo(self.last_link)
+        update = self.get_page_geo(self.link)
         update.update(status=status)
         return update
 
@@ -79,16 +89,12 @@ class Acrobot(object):
         row = c.fetchone()
 
         if row is None:
-            name = self.next_combo()
+            self.log.debug("Couldn't find a row, checking off another")
+            name = self.checkoff_get_next_combination()
             self.get_acronyms(name)
             return self.next_page()
 
         return row
-
-    def next_combo(self):
-        self.checkoff_last_combination()
-        name = self.get_next_combination()
-        return self.get_acronyms(name)
 
     def get_acronyms(self, combination):
         '''
@@ -112,6 +118,9 @@ class Acrobot(object):
 
         try:
             content = get_page_content(json)
+
+            self.log.debug("Got %d chars of content for %s", len(content), combination)
+
             content = re.sub(r"\[\[Category:[^\]]+\]\]", "", content)
 
             rawlines = re.split(WIKI_SPLIT, content)
@@ -120,7 +129,7 @@ class Acrobot(object):
         except KeyError:
             # empty: make page as tweeted and move to the next one
             self.log.info('No pages for %s' % combination)
-            name = self.next_combo()
+            name = self.checkoff_get_next_combination()
             return self.get_acronyms(name)
 
         # not empty: send to database and you're done
@@ -133,20 +142,23 @@ class Acrobot(object):
         curs.executemany(insert, values)
         self.conn.commit()
 
-    def checkoff_last_combination(self):
+    def checkoff_get_next_combination(self):
+        checkoff = """UPDATE combinations SET tweeted = 1 WHERE name=(
+            SELECT name FROM combinations WHERE tweeted != 1 LIMIT 1
+        )"""
         curs = self.conn.cursor()
-        curs.execute('SELECT name FROM combinations WHERE tweeted=0 LIMIT 1')
-        row = curs.fetchone()
-        self.log.debug('checking off %s', row)
-        curs.execute("UPDATE combinations SET tweeted=0 WHERE name=?", row)
+        self.log.debug('checking off a row')
+        curs.execute(checkoff)
         self.conn.commit()
 
-    def get_next_combination(self):
-        c = self.conn.cursor().execute("SELECT name FROM combinations WHERE tweeted!=1 LIMIT 1")
-        return c.fetchone()[0]
+        curs.execute("SELECT name FROM combinations WHERE tweeted != 1 LIMIT 1")
+        result = curs.fetchone()
+        self.log.info('Next combination: %s', result)
+
+        return result[0]
 
     def checkoff_page(self):
-        self.conn.cursor().execute('UPDATE acronyms SET tweeted = 1 WHERE link=?', (self.last_link,))
+        self.conn.cursor().execute('UPDATE acronyms SET tweeted = 1 WHERE link=?', (self.link,))
         self.conn.commit()
 
     def get_page_geo(self, page):
@@ -182,7 +194,7 @@ class Acrobot(object):
             direction_check = ('N' in group, 'S' in group, 's' in group, 'n' in group)
 
         except (AttributeError, KeyError, ValueError):
-            self.log.debug('Error getting geo for page %s' % page)
+            self.log.debug('No geo for [[%s]]' % page)
             return {"lat": None, "long": None}
 
         if any(direction_check):
@@ -197,12 +209,3 @@ class Acrobot(object):
             latitude, longitude = float(z[0]), float(z[1])
 
         return {"lat": latitude, "long": longitude}
-
-
-def piped_to_decimal(pipecoord):
-    '''Turn xx|zz|yy| into xx.foo'''
-    atoms = pipecoord.strip('|').split('|')
-    coord = 0
-    for i, e in enumerate(atoms):
-        coord += float(e) / pow(60, i)
-    return coord
