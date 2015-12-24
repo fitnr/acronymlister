@@ -6,7 +6,7 @@ def main():
     parent = tbu.args.parent(version=version)
     parser = ArgumentParser(parents=[parent])
     parser.add_argument('database')
-    parser.set_defaults(screen_name='alltheacronyms')
+    parser.set_defaults(screen_name='acronymlister')
     args = parser.parse_args()
 
     api = tbu.API(args)
@@ -19,7 +19,7 @@ def main():
             bot.checkoff_page()
 
     except Exception as e:
-        api.logger.error(e)
+        api.logger.error("{}".format(e))
 
 
 if __name__ == '__main__':
