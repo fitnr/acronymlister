@@ -1,8 +1,11 @@
+PIP ?= pip3.5
+PYTHON ?= python3.5
+
 .PHONY: develop install
 
 install develop: %: requirements.txt
-	pip -q install $(INSTALLFLAGS) -r $<
-	python setup.py $(SETUPFLAGS) $* $(INSTALLFLAGS)
+	$(PIP) -q install $(INSTALLFLAGS) -r $<
+	$(PYTHON) setup.py $(SETUPFLAGS) $* $(INSTALLFLAGS)
 
 CREATE = CREATE TABLE tmp ( \
 	name VARCHAR(3) \
@@ -19,7 +22,7 @@ alpha.db: alpha.txt
 	sqlite3 $@ ".import '/dev/stdin' tmp" < $<
 	sqlite3 $@ "CREATE TABLE combinations AS SELECT name, 0 tweeted FROM tmp;"
 	sqlite3 $@ "DROP TABLE tmp;"
-	python aaa.py $@
+	$(PYTHON) aaa.py $@
 
 alpha.txt:
 	echo {A..Z}{A..Z}{A..Z} | tr ' ' '\n' > $@
