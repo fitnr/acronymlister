@@ -1,7 +1,8 @@
 .PHONY: develop install
 
-install develop: %:
-	python setup.py $(SETUPFLAGS) $* $(PYTHONFLAGS)
+install develop: %: requirements.txt
+	pip -q install $(INSTALLFLAGS) -r $<
+	python setup.py $(SETUPFLAGS) $* $(INSTALLFLAGS)
 
 CREATE = CREATE TABLE tmp ( \
 	name VARCHAR(3) \
