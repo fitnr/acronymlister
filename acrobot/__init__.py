@@ -8,15 +8,6 @@ from twitter_bot_utils import helpers
 
 __version__ = '0.2'
 
-'''
-list item options:
-    * acronym is exactly inside link: [[Asian Athletics Association]]
-    * multiple links on the line
-    * acronym: ''AAA'', a Japanese manga by [[Haruka Fukushima]]
-    * A description: [[Morse code]] for "aerial attacker", used in conjunction with SOS'
-    * A link with a display name: [[JFK (Clone High)|JFK (''Clone High'')]]
-    * Wikilink with external link in desc: [[XML2PDF|XML2PDF Formatting Engine Server]] from [http://www.alt-soft.com/ AltSoft] has near 100% support for the XSL-FO 1.1
-'''
 
 WIKI = 'en'
 DISAMB_CAT = 'Category:Disambiguation pages'

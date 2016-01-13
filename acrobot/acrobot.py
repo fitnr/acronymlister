@@ -6,7 +6,7 @@ def main():
     parent = tbu.args.parent(version=version)
     parser = ArgumentParser(parents=[parent])
     parser.add_argument('database')
-    parser.set_defaults(screen_name='acronymlister')
+    parser.set_defaults()
     args = parser.parse_args()
 
     api = tbu.API(args)
