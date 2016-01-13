@@ -20,7 +20,7 @@ list item options:
 
 WIKI = 'en'
 DISAMB_CAT = 'Category:Disambiguation pages'
-WIKI_SYNTAX = r"^(=|'''|\{\{|$)"
+WIKI_SYNTAX = r"^(=|'''|\{\{|In [^:]+:|\w+ may refer to:|$)"
 WIKI_SPLIT = r'[\*\n]'
 WIKI_LINK = r'\[\[([^|]+?)(?=[\]|])'
 
