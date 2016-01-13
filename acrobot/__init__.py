@@ -232,4 +232,5 @@ class Acrobot(object):
         except (AttributeError, KeyError, ValueError) as e:
             self.log.debug('No geo for [[%s]]', page)
             self.log.debug('%s', e)
-            return {"lat": None, "long": None}
+
+        return {"lat": None, "long": None}
