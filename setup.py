@@ -6,7 +6,7 @@ with open('requirements.txt') as f:
 setup(
     name='acrobot',
 
-    version='0.1',
+    version='0.2',
 
     description='acronym bot',
 
