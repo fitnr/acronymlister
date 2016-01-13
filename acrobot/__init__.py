@@ -106,23 +106,17 @@ class Acrobot(object):
 
     def compose(self):
         acronym, self.link, description = self.next_page()
-        self.log.info('composing [[%s]] - %s', self.link, description)
+        self.log.info('composing %s - %s', self.link, description)
 
-        if acronym not in description:
+        if acronym not in description and len(description) < 140:
             description = '{} is {}'.format(acronym, description)
 
-        if self.link:
-            url = 'https://{lang}.wikipedia.org/wiki/{link}'.format(link=self.link.replace(' ', '_'), lang=self.lang)
-        else:
-            url = ""
-
-        # link and line break are 24 characters
-        desc = helpers.shorten(description, 116, ellipsis=True)
-        self.log.debug("%s %s", desc, url)
-
         update = self.get_page_geo(self.link)
-        self.log.debug("%s", update)
-        update['status'] = desc + "\n" + url
+
+        update['status'] = helpers.shorten(description, ellipsis=True)
+
+        self.log.debug('%s', update)
+
         return update
 
     def next_page(self):
