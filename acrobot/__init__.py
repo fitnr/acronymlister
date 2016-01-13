@@ -28,9 +28,9 @@ WIKI_LINK = r'\[\[([^|]+?)(?=[\]|])'
 def format_line(line):
     '''
     From a line on a disambiguation page, return a link (possibly None) and a description
+    Will return the first link it finds.
     '''
-    # todo: remove external links
-    match = re.match(WIKI_LINK, line)
+    match = re.search(WIKI_LINK, line)
     link = match.groups()[0] if match else ''
     desc_sans_link = re.sub(r"(?<=\[\[)[^|]+\|", '', line)
     description = re.sub(r"(\[\[|\]\]|'')", "", desc_sans_link)
