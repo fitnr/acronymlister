@@ -117,7 +117,7 @@ class Acrobot(object):
             url = ""
 
         # link and line break are 24 characters
-        desc = helpers.shorten(description, 116)
+        desc = helpers.shorten(description, 116, ellipsis=True)
         self.log.debug("%s %s", desc, url)
 
         update = self.get_page_geo(self.link)
