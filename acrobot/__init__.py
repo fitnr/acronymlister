@@ -43,55 +43,10 @@ def get_page_content(json):
     return pages[0]['revisions'][0]['*']
 
 
-def piped_to_decimal(pipecoord):
-    '''Turn xx|zz|yy| into xx.foo'''
-    atoms = enumerate(pipecoord.strip('|').split('|'))
-    coords = (float(e) / pow(60, i) for i, e in atoms)
-    return sum(coords)
-
-
-def decode_coord(content):
-    '''
-    Decode {{Coord...}} into lat/lon
-    '''
-    # Example coord
-    # {{Coord|42|22|28|N|71|07|01|W|region:US_type:edu|display=title}}
-    match = re.search(r'(?<={{[cC]oord\|)([^}]+)(?=}})', content)
-
-    group = match.groups()[0]
-
-    direction_check = ('N' in group, 'S' in group, 's' in group, 'n' in group)
-
-    if any(direction_check):
-        # It's mins, secs
-        fragments = re.split(r'[NSnsWEwe]', group, 2)
-        latitude = piped_to_decimal(fragments[0])
-        longitude = piped_to_decimal(fragments[1])
-
-    else:
-        # it's decimal
-        z = group.split('|')
-        latitude, longitude = float(z[0]), float(z[1])
-
-    return {
-        "lat": latitude,
-        "long": longitude
-    }
-
-
-def decode_infobox_latlon(content):
-    lat = re.search(r'(?<=\|) ?latitude[ =]+([-\d\.]+)', content).groups()
-    lon = re.search(r'(?<=\|) ?longitude[ =]+([-\d\.]+)', content).groups()
-
-    return {
-        'lat': float(lat[0]),
-        'long': float(lon[0])
-    }
-
-
 class Acrobot(object):
 
     link = ''
+    kml = 'https://tools.wmflabs.org/kmlexport/'
 
     def __init__(self, database, log=None, twitter=None, lang=None):
         self.lang = lang or WIKI
@@ -213,33 +168,25 @@ class Acrobot(object):
 
     def get_page_geo(self, page):
         '''
-        Get the lat/lon of a Wikipedia page, if it exists
+        Get the lat/lon of a Wikipedia page, if it exists.
+        Uses the kmlexport WMF labs utility and janky regex parsing
         '''
         self.log.debug('getting location of %s', page)
 
-        params = {
-            'format': 'json',
-            'action': 'query',
-            'titles': page,
-            'rvprop': 'content',
-            'prop': 'revisions',
-            "redirects": True
-        }
+        r = requests.get(self.kml, params={'article': page}, headers=self.headers)
 
-        r = requests.get(self.api, params=params, headers=self.headers)
-        json = r.json()
+        if 'No geocoded items found' in r.text:
+            return {"lat": None, "long": None}
 
         try:
-            content = get_page_content(json)
-
-            if '{{Coord' in content or '{{coord' in content:
-                return decode_coord(content)
-
-            if '| latitude' in content or '|latitude' in content:
-                return decode_infobox_latlon(content)
+            coord_pat = r'(?<=<coordinates>)(-?[\d.]+),(-?[\d.]+),?0?(?=</coordinates>)'
+            match = re.search(coord_pat, r.text)
+            x, y = match.groups()
+            x, y = float(x), float(y)
 
         except (AttributeError, KeyError, ValueError) as e:
-            self.log.debug('No geo for [[%s]]', page)
-            self.log.debug('%s', e)
+            self.log.error('Error finding geo on %s', page)
+            self.log.error('%s', e)
+            x, y = None, None
 
-        return {"lat": None, "long": None}
+        return {"lat": y, "long": x}
