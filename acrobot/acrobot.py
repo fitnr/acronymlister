@@ -10,7 +10,7 @@ def main():
     args = parser.parse_args()
 
     api = tbu.API(args)
-    bot = Acrobot(args.database, log=api.logger)
+    bot = Acrobot(args.database, twitter=api, log=api.logger)
 
     try:
         update = bot.compose()

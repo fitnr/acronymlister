@@ -93,11 +93,12 @@ class Acrobot(object):
 
     link = ''
 
-    def __init__(self, database, log=None, lang=None):
+    def __init__(self, database, log=None, twitter=None, lang=None):
         self.lang = lang or WIKI
         self.headers = {'user-agent': 'Acrobot/{}'.format(self.lang)}
         self.log = log or logging
         self.conn = sqlite3.connect(database)
+        self.twitter = twitter
 
     @property
     def api(self):
@@ -136,6 +137,7 @@ class Acrobot(object):
             self.log.debug("Couldn't find a row, checking off another")
             name = self.checkoff_get_next_combination()
             self.get_acronyms(name)
+            self.follow(name)
             return self.next_page()
 
         return row
@@ -185,6 +187,16 @@ class Acrobot(object):
         curs = self.conn.cursor()
         curs.executemany(insert, values)
         self.conn.commit()
+
+    def follow(self, screen_name):
+        if not self.twitter:
+            return
+        try:
+            self.twitter.create_friendship(screen_name=screen_name)
+            self.log.info('Following @%s', screen_name)
+        except Exception as e:
+            self.log.info('Error following @%s: %s', screen_name, e)
+            pass
 
     def checkoff_get_next_combination(self):
         checkoff = """UPDATE combinations SET tweeted = 1 WHERE name=(
