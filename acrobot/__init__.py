@@ -104,8 +104,11 @@ class Acrobot(object):
         return "https://{}.wikipedia.org/w/api.php".format(self.lang)
 
     def compose(self):
-        self.link, description = self.next_page()
+        acronym, self.link, description = self.next_page()
         self.log.info('composing [[%s]] - %s', self.link, description)
+
+        if acronym not in description:
+            description = '{} is {}'.format(acronym, description)
 
         if self.link:
             url = 'https://{lang}.wikipedia.org/wiki/{link}'.format(link=self.link.replace(' ', '_'), lang=self.lang)
@@ -126,7 +129,7 @@ class Acrobot(object):
         Pick the next page.
         Check off unused acronyms if need be
         '''
-        c = self.conn.execute("SELECT link, description FROM acronyms WHERE tweeted != 1 LIMIT 1")
+        c = self.conn.execute("SELECT acronym, link, description FROM acronyms WHERE tweeted != 1 LIMIT 1")
         row = c.fetchone()
 
         if row is None:
