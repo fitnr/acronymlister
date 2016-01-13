@@ -4,6 +4,8 @@ Controls [@acronymlister](https://twitter.com/acronymlister), a Twitter bot that
 
 The command line tool requires a `bots.yaml` file, as described in [`twitter_bot_utils`](https://github.com/fitnr/twitter_bot_utils).
 
+Requires Python 3.5, sqlite3. Initialize the database with `make`, install the package with `make install`.
+
 ````
 usage: acrobot [-h] [-c PATH] [-u SCREEN_NAME] [-n] [-v] [-q] [-V] database
 

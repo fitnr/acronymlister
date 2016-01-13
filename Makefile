@@ -1,12 +1,6 @@
 PIP ?= pip3.5
 PYTHON ?= python3.5
 
-.PHONY: develop install
-
-install develop: %: requirements.txt
-	$(PIP) -q install $(INSTALLFLAGS) -r $<
-	$(PYTHON) setup.py $(SETUPFLAGS) $* $(INSTALLFLAGS)
-
 CREATE = CREATE TABLE tmp ( \
 	name VARCHAR(3) \
 	); \
@@ -16,6 +10,14 @@ CREATE = CREATE TABLE tmp ( \
 		description TEXT, \
 		tweeted VARCHAR(1) \
 	)
+
+.PHONY: all develop install
+
+all: alpha.db
+
+install develop: %: requirements.txt alpha.db
+	$(PIP) -q install $(INSTALLFLAGS) -r $<
+	$(PYTHON) setup.py $(SETUPFLAGS) $* $(INSTALLFLAGS)
 
 alpha.db: alpha.txt
 	sqlite3 $@ "$(CREATE);"
